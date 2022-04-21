@@ -12,8 +12,11 @@ Controls:
 - `s`: Save. TODO(hayesall)
 """
 
+import argparse
 from copy import deepcopy
+from datetime import datetime
 from enum import Enum
+import json
 import os
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 
@@ -25,11 +28,6 @@ from srlearn.rdn import BoostedRDN
 from srlearn import Database
 
 
-pygame.init()
-pygame.event.set_blocked(pygame.MOUSEMOTION)
-
-CLOCK = pygame.time.Clock()
-
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 LIGHTGRAY = (250, 250, 250)
@@ -38,12 +36,7 @@ ORANGE = (255, 165, 0)
 
 WIDTH, HEIGHT = 1000, 600
 
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Roof World GUI")
-
 SPACING = 25
-POINTS = {}
-LINES = []
 LINE_MODE = None
 
 
@@ -51,20 +44,13 @@ def myround(x, base=25):
     return base * round(x / base)
 
 
-def draw_background(c=LIGHTGRAY):
-    screen.fill(c)
-
-
-def draw_graphpaper(k):
+def draw_graphpaper(screen, k):
     for i in range(WIDTH // k):
         x = k * i
         y = k * i
         pygame.draw.line(screen, LIGHTBLUE, (x, 0), (x, HEIGHT), 1)
         pygame.draw.line(screen, LIGHTBLUE, (0, y), (WIDTH, y), 1)
 
-
-def draw_point(x, y, c=BLACK):
-    pygame.draw.circle(screen, c, (x, y), 5)
 
 
 class Operations(Enum):
@@ -80,7 +66,41 @@ class FlatWorld:
         self.points = {}
         self.lines = []
 
+    @staticmethod
+    def from_json(file_path: str):
+
+        with open(file_path, "r") as fh:
+            points, lines = json.loads(fh.read())
+
+        # Unmap the points
+        pnts = {}
+        for entry in points:
+            pnts[tuple(entry["point"])] = tuple(entry["color"])
+
+        fw = FlatWorld()
+        fw.points = pnts
+        fw.lines = lines
+
+        return fw
+
+    def to_json(self, file_path: str):
+
+        # Remap the points to a list, since JSON doesn't recognize tuple dictionaries
+        pnts_list = []
+        for k, v in self.points.items():
+            pnts_list.append({
+                "point": k,
+                "color": v,
+            })
+
+        with open(file_path, "w") as fh:
+            fh.write(json.dumps([pnts_list, self.lines]))
+
     def dump_state(self):
+
+        print(self.points)
+        print(self.lines)
+
         net = Network(self.points, self.lines)
         database = net.describe()
 
@@ -202,10 +222,24 @@ class FlatWorld:
 
 if __name__ == "__main__":
 
+    PARSER = argparse.ArgumentParser()
+    PARSER.add_argument("file", nargs="?", help="Load from a json file.")
+    ARGS = PARSER.parse_args()
+
+    if ARGS.file:
+        fw = FlatWorld.from_json(ARGS.file)
+    else:
+        fw = FlatWorld()
+
     DONE = False
     BACKGROUND = True
 
-    fw = FlatWorld()
+    pygame.init()
+    pygame.event.set_blocked(pygame.MOUSEMOTION)
+
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Roof World GUI")
+    CLOCK = pygame.time.Clock()
 
     save_state = 0
 
@@ -242,6 +276,11 @@ if __name__ == "__main__":
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
                 # TODO(hayesall): Save to an output directory.
+
+                # Get a datetime + path
+                save_to = f"saved/building_{int(datetime.now().timestamp())}.json"
+                fw.to_json(save_to)
+
                 fw.export(start=save_state)
                 save_state += len(fw.points)
                 print("Saved to network.pickle")
@@ -285,14 +324,14 @@ if __name__ == "__main__":
 
         # Render the scene
         if BACKGROUND:
-            draw_background(LIGHTGRAY)
-            draw_graphpaper(SPACING)
+            screen.fill(LIGHTGRAY)
+            draw_graphpaper(screen, SPACING)
         else:
-            draw_background(WHITE)
+            screen.fill(WHITE)
         for ((x1, y1), (x2, y2)) in fw.lines:
             pygame.draw.line(screen, BLACK, (x1, y1), (x2, y2), 3)
         for (x, y) in fw.points:
-            draw_point(x, y, fw.points[(x, y)])
+            pygame.draw.circle(screen, fw.points[(x, y)], (x, y), 5)
         if LINE_MODE:
             pygame.draw.line(screen, BLACK, LINE_MODE, pygame.mouse.get_pos(), 1)
 
