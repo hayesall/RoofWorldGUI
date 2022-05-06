@@ -3,3 +3,4 @@ srlearn>=0.5.4
 numpy>=1.20.0
 matplotlib>=3.5.0
 relational-datasets>=0.2.2
+opencv-python>=4.5.5.64
