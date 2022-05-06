@@ -1,5 +1,5 @@
 pygame>=2.1.2
-srlearn>=0.5.4
+srlearn>=0.5.5
 numpy>=1.20.0
 matplotlib>=3.5.0
 relational-datasets>=0.2.2
