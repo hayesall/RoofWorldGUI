@@ -1,5 +1,4 @@
-# Copyright 2022 Alexander L. Hayes
-# MIT License
+# Copyright © 2022 Alexander L. Hayes
 
 """
 Controls:
@@ -9,7 +8,7 @@ Controls:
 
 - `b`: Turn off graph paper / gray background mode (helpful for taking screenshots)
 - `c`: Reset
-- `s`: Save. TODO(hayesall)
+- `s`: Save.
 """
 
 import argparse
@@ -24,7 +23,7 @@ from roofworld.exporter import Network
 
 import matplotlib.pyplot as plt
 import pygame
-from srlearn.rdn import BoostedRDN
+from srlearn.rdn import BoostedRDNClassifier
 from srlearn import Database
 
 
@@ -121,8 +120,8 @@ class FlatWorld:
         db.neg = []
         db.facts = database.facts
 
-        rdn = BoostedRDN()
-        rdn.from_json("predict_highpoint_rdn.json")
+        rdn = BoostedRDNClassifier()
+        rdn.from_json("roofworld/predict_highpoint_rdn.json")
 
         zs = rdn.predict_proba(db)
 
@@ -148,11 +147,6 @@ class FlatWorld:
         with open("facts.txt", "a") as fh:
             for ex in database.facts:
                 fh.write(ex + "\n")
-
-        import pickle
-
-        with open("network.pickle", "wb") as fh:
-            pickle.dump(net, fh)
 
     def add_point(self, x, y):
         self.operations.append((Operations.ADD_POINT, (x, y)))
